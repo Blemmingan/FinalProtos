@@ -18,11 +18,20 @@
 #include <sys/socket.h>  // socket
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-
+#include "pop.h"
 
 
 #define DEFAULT_PORT 10080
 #define MAX_PENDING_CONNECTIONS 20
+
+static bool done = false;
+//	Manejo de señales.
+static void
+sigterm_handler(const int signal) {
+    printf("signal %d, cleaning up and exiting\n",signal);
+    done = true;
+}
+
 int main(int argc, char ** argv){
     
     //  PORT NUMBER MANAGEMENT
@@ -101,6 +110,78 @@ int main(int argc, char ** argv){
     }
 
     printf("Socket is bound and listening\n");
+
+
+    // registrar sigterm es útil para terminar el programa normalmente.
+    // esto ayuda mucho en herramientas como valgrind.
+    signal(SIGTERM, sigterm_handler);
+    signal(SIGINT,  sigterm_handler);
+
+    // Seteo los flags no bloqueantes.
+    if(selector_fd_set_nio(serverSocket) == -1) {
+        errorMessage = "getting server socket flags";
+        goto finally;
+    }
+    printf("Nonblock selector flags set\n");
+    const struct selector_init conf = {
+        .signal = SIGALRM,
+        .select_timeout = {
+            .tv_sec  = 10,
+            .tv_nsec = 0,
+        },
+    };
+
+    // Inicializo el selector con el struct que puse arriba. 
+    // En particular, le paso la señal que quiero que intercepte
+    // y los timeouts para el select.
+    if(0 != selector_init(&conf)) {
+        errorMessage = "initializing selector";
+        goto finally;
+    }
+    printf("Selector initialized\n");
+
+    // Aca verdaderamente se crea el selector con 1024 elementos. 
+    selector = selector_new(1024);
+    if(selector == NULL) {
+        errorMessage = "unable to create selector";
+        goto finally;
+    }
+    printf("Selector created\n");
+
+    // Handler para el socket pasivo, solo acepta la conexion.
+    const struct fd_handler pop = {
+        .handle_read       = pop3_passive_accept,
+        .handle_write      = NULL,
+        .handle_close      = NULL, // nada que liberar
+    };
+
+   // Registra en la tabla de FDs.
+    selectorStatus = selector_register(selector, serverSocket, &pop,
+                                              OP_READ, NULL);
+    if(selectorStatus != SELECTOR_SUCCESS) {
+        errorMessage = "registering fd";
+        goto finally;
+    }
+
+    printf("File descriptor for passive socket registered\n");
+
+    // ESTO VA A SEGUIR HASTA QUE TERMINE EL PROGRAMA. Hace select!!!!!
+    // Si ss no esta en SELECTOR_SUCCESS es porque el servidor esta sirviendo otros sockets.
+    for(;!done;) {
+        errorMessage = NULL;
+        selectorStatus = selector_select(selector);
+        if(selectorStatus != SELECTOR_SUCCESS) {
+            errorMessage = "serving";
+            goto finally;
+        }
+        printf("WAITING FOR ACCEPT\n");
+    }
+    if(errorMessage == NULL) {
+        errorMessage = "closing";
+    }
+
+
+
     int ret = 0;
 finally: 
     //  If there was an error...

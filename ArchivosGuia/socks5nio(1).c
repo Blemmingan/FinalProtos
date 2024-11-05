@@ -80,7 +80,7 @@ struct hello_st {
  * Se utiliza un contador de referencias (references) para saber cuando debemos
  * liberarlo finalmente, y un pool para reusar alocaciones previas.
  */
-struct socks5 {
+struct pop3 {
 …
     /** maquinas de estados */
     struct state_machine          stm;
@@ -102,7 +102,7 @@ struct socks5 {
 
 /** realmente destruye */
 static void
-socks5_destroy_(struct socks5* s) {
+socks5_destroy_(struct pop3* s) {
     if(s->origin_resolution != NULL) {
         freeaddrinfo(s->origin_resolution);
         s->origin_resolution = 0;
@@ -115,7 +115,7 @@ socks5_destroy_(struct socks5* s) {
  * y el pool de objetos.
  */
 static void
-socks5_destroy(struct socks5 *s) {
+socks5_destroy(struct pop3 *s) {
     if(s == NULL) {
         // nada para hacer
     } else if(s->references == 1) {
@@ -135,7 +135,7 @@ socks5_destroy(struct socks5 *s) {
 
 void
 socksv5_pool_destroy(void) {
-    struct socks5 *next, *s;
+    struct pop3 *next, *s;
     for(s = pool; s != NULL ; s = next) {
         next = s->next;
         free(s);
