@@ -51,7 +51,7 @@ int main(int argc, char ** argv){
         return 1;
     }
 
-
+    printf("Starting server...\n");
     //  I close stdin because I am a server, I do not read from stdin.
     close(0);
 
