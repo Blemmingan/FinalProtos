@@ -100,6 +100,7 @@ int main(int argc, char ** argv){
         goto finally;
     }
 
+    printf("Socket is bound and listening\n");
     int ret = 0;
 finally: 
     //  If there was an error...

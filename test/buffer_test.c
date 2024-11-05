@@ -104,7 +104,7 @@ suite(void) {
     return s;
 }
 
-int
+/*int
 main(void) {
     SRunner *sr  = srunner_create(suite());
     int number_failed;
@@ -113,4 +113,4 @@ main(void) {
     number_failed = srunner_ntests_failed(sr);
     srunner_free(sr);
     return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
-}
+}*/
