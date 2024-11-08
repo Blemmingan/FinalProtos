@@ -38,7 +38,7 @@ int main(int argc, char ** argv){
 
     int port = DEFAULT_PORT;
     if (argc == 1){
-        //  Use default port
+        //  No argument given, use default port
     }
     else if (argc == 2){
         //	Use specified port.
@@ -80,7 +80,7 @@ int main(int argc, char ** argv){
     address.sin_addr.s_addr = htonl(INADDR_ANY);
     //  Converts port number to the correct format to use with sockets.
     //  Socket will listen on port number specified.
-    address.sin_port = htonl(port);
+    address.sin_port = htons(port);
 
     //  Creates the socket. Socket will use IPV4, a stream-based protocol, and TCP.
     //  Socket file descriptor will be saved in the variable.
@@ -101,11 +101,13 @@ int main(int argc, char ** argv){
 
     if(bind(serverSocket, (struct sockaddr *) &address, sizeof(address)) < 0){
         errorMessage = "Unable to bind passive socket.\n";
+        printf("Unable to bind passive socket.\n");
         goto finally;
     }
 
     if (listen(serverSocket, MAX_PENDING_CONNECTIONS) < 0) {
         errorMessage = "Passive socket is unable to listen\n";
+        printf("Passive socket unable to listen.\n");
         goto finally;
     }
 
@@ -168,7 +170,7 @@ int main(int argc, char ** argv){
     // ESTO VA A SEGUIR HASTA QUE TERMINE EL PROGRAMA. Hace select!!!!!
     // Si ss no esta en SELECTOR_SUCCESS es porque el servidor esta sirviendo otros sockets.
     for(;!done;) {
-        errorMessage = NULL;
+        errorMessage = "There was a generic error.\n";
         selectorStatus = selector_select(selector);
         if(selectorStatus != SELECTOR_SUCCESS) {
             errorMessage = "serving";
@@ -183,6 +185,7 @@ int main(int argc, char ** argv){
 
 
     int ret = 0;
+    printf("Exiting, error message: %s\n", errorMessage);
 finally: 
     //  If there was an error...
     if(selectorStatus != SELECTOR_SUCCESS) {
