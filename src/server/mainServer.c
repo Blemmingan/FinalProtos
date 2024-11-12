@@ -157,6 +157,7 @@ int main(int argc, char ** argv){
         .handle_close      = NULL, // nada que liberar
     };
 
+
    // Registra en la tabla de FDs.
     selectorStatus = selector_register(selector, serverSocket, &pop,
                                               OP_READ, NULL);
@@ -164,7 +165,6 @@ int main(int argc, char ** argv){
         errorMessage = "registering fd";
         goto finally;
     }
-
     printf("File descriptor for passive socket registered\n");
 
     // ESTO VA A SEGUIR HASTA QUE TERMINE EL PROGRAMA. Hace select!!!!!
@@ -172,6 +172,7 @@ int main(int argc, char ** argv){
     for(;!done;) {
         errorMessage = "There was a generic error.\n";
         selectorStatus = selector_select(selector);
+    
         if(selectorStatus != SELECTOR_SUCCESS) {
             errorMessage = "serving";
             goto finally;

@@ -101,3 +101,7 @@ buffer_compact(buffer *b) {
         b->write = b->data + n;
     }
 }
+
+uint64_t buffer_position(buffer * b){
+    return b->write - b->read;
+}

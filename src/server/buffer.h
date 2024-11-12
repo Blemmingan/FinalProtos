@@ -145,5 +145,6 @@ buffer_can_read(buffer *b);
 bool
 buffer_can_write(buffer *b);
 
+uint64_t buffer_position(buffer * b);
 
 #endif
