@@ -61,6 +61,7 @@ int main(int argc, char ** argv){
     }
 
     printf("Starting server...\n");
+    printf("Starting server2...\n");
     //  I close stdin because I am a server, I do not read from stdin.
     close(0);
 
