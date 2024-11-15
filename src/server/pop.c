@@ -26,8 +26,10 @@ typedef struct pop3{
 void echo_handle_read(struct selector_key *key) {
 
     // Read data from the client
-    ssize_t bytes_read = recv(key->fd, key->data, buffer_position(key->data) +1, 0);
-    buffer_write(key->data, bytes_read);
+    size_t nbytes;
+    ssize_t bytes_read = recv(key->fd, buffer_read_ptr(key->data, &nbytes), MAX_BUFFER_SIZE, 0);
+    nbytes += bytes_read;
+    buffer_write(key->data, (uint8_t) nbytes);
     if (bytes_read == -1) {
         perror("Error reading from client");
         close(key->fd);
@@ -37,13 +39,13 @@ void echo_handle_read(struct selector_key *key) {
     if (bytes_read == 0) {
         // Client disconnected (clean close)
         printf("Client disconnected, preparing to close connection...\n");
-
+        buffer_reset(key->data);
         // This ensures that the cleanup will happen later, once the event loop is done processing
         // The cleanup will be done in the close handler when the socket is unregistered
         selector_set_interest(key->s, key->fd, OP_NOOP);  // Temporarily remove it from the selector
         return;
     }
-    if(!buffer_can_read(key->data)){
+    if(buffer_can_read(key->data)){
         selector_set_interest(key->s, key->fd, OP_WRITE);
     }
     
@@ -51,10 +53,10 @@ void echo_handle_read(struct selector_key *key) {
 
 void echo_handle_write(struct selector_key * key){
     // Echo the data back to the client
-    buffer * localbuffer = key->data;
-
-    ssize_t bytes_written = send(key->fd, key->data, localbuffer->write, 0);
-
+    size_t nbytes;
+    ssize_t bytes_written = send(key->fd, buffer_read_ptr(key->data, &nbytes), buffer_position(key->data), 0);
+    nbytes += bytes_written;
+    buffer_read_adv(key->data, bytes_written);
     if (bytes_written == -1) {
         perror("Error writing to client");
         close(key->fd);
@@ -81,9 +83,13 @@ void pop3_passive_accept(struct selector_key *key) {
     int client_fd = accept(key->fd, (struct sockaddr*)&client_addr, &client_addr_len);
 
     //char buffer[MAX_BUFFER_SIZE]; debe ser un tipo buffer
-    buffer *buffer = malloc(sizeof(buffer));
+    buffer buffer;
+    buffer.data = NULL;
+    buffer.limit = NULL;
+    buffer.read = NULL;
+    buffer.write = NULL;
     uint8_t buf[MAX_BUFFER_SIZE];
-    buffer_init(buffer, MAX_BUFFER_SIZE, buf);
+    buffer_init(&buffer, MAX_BUFFER_SIZE, buf);
 
     if (client_fd == -1) {
         perror("Accept failed");
@@ -100,7 +106,7 @@ void pop3_passive_accept(struct selector_key *key) {
     };
 
     // Register the client socket with the selector for OP_READ (only read initially)
-    selector_status status = selector_register(key->s, client_fd, &echo_handler, OP_READ, buffer);
+    selector_status status = selector_register(key->s, client_fd, &echo_handler, OP_READ, &buffer);
 
     if (status != SELECTOR_SUCCESS) {
         fprintf(stderr, "Failed to register client fd with selector: %s\n", selector_error(status));
