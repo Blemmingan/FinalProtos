@@ -171,7 +171,7 @@ int main(int argc, char ** argv){
     // ESTO VA A SEGUIR HASTA QUE TERMINE EL PROGRAMA. Hace select!!!!!
     // Si ss no esta en SELECTOR_SUCCESS es porque el servidor esta sirviendo otros sockets.
     for(;!done;) {
-        errorMessage = "There was a generic error.\n";
+        errorMessage = "You killed the program with CTRL-C\n";
         selectorStatus = selector_select(selector);
     
         if(selectorStatus != SELECTOR_SUCCESS) {
@@ -186,9 +186,10 @@ int main(int argc, char ** argv){
 
 
 
+
     int ret = 0;
-    printf("Exiting, error message: %s\n", errorMessage);
 finally: 
+    printf("In FINALLY\n");
     //  If there was an error...
     if(selectorStatus != SELECTOR_SUCCESS) {
         fprintf(stderr, "%s: %s\n", (errorMessage == NULL) ? "": errorMessage,

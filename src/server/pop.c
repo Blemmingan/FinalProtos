@@ -45,9 +45,16 @@ void echo_handle_read(struct selector_key *key) {
         selector_set_interest(key->s, key->fd, OP_NOOP);  // Temporarily remove it from the selector
         return;
     }
-    if(buffer_can_read(key->data)){
+
+
+    if (buffer_can_read(key->data)) {
+    // Only set OP_WRITE if it's not already set
         selector_set_interest(key->s, key->fd, OP_WRITE);
-    }
+    } else {
+    // If nothing to read, reset the interest or set it back to OP_READ if needed
+        selector_set_interest(key->s, key->fd, OP_READ);
+}
+
     
 }
 
@@ -61,6 +68,10 @@ void echo_handle_write(struct selector_key * key){
         perror("Error writing to client");
         close(key->fd);
         return;
+    }
+    if (!buffer_can_read(key->data)) {
+        // If no more data to read, stop interest in writing
+        selector_set_interest(key->s, key->fd, OP_READ);
     }
 }
 
