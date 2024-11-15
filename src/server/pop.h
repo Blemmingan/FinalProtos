@@ -1,7 +1,7 @@
 #ifndef poppuntoh
 #define poppuntoh
 
-#define MAX_BUFFER_SIZE 1024
+#define MAX_BUFFER_SIZE 40000
 
 //  Handles accepting connections to the passive socket.
 void pop3_passive_accept(struct selector_key *key);

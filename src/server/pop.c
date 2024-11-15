@@ -24,12 +24,10 @@ typedef struct pop3{
 
 // Echo handler for reading data
 void echo_handle_read(struct selector_key *key) {
-   
-   buffer * localbuffer = key->data;
 
     // Read data from the client
-    ssize_t bytes_read = recv(key->fd, localbuffer->data, buffer_position(localbuffer) +1, 0);
-    localbuffer->read += bytes_read;
+    ssize_t bytes_read = recv(key->fd, key->data, buffer_position(key->data) +1, 0);
+    buffer_write(key->data, bytes_read);
     if (bytes_read == -1) {
         perror("Error reading from client");
         close(key->fd);
@@ -45,7 +43,7 @@ void echo_handle_read(struct selector_key *key) {
         selector_set_interest(key->s, key->fd, OP_NOOP);  // Temporarily remove it from the selector
         return;
     }
-    if(!buffer_can_read(&localbuffer)){
+    if(!buffer_can_read(key->data)){
         selector_set_interest(key->s, key->fd, OP_WRITE);
     }
     
@@ -83,8 +81,9 @@ void pop3_passive_accept(struct selector_key *key) {
     int client_fd = accept(key->fd, (struct sockaddr*)&client_addr, &client_addr_len);
 
     //char buffer[MAX_BUFFER_SIZE]; debe ser un tipo buffer
-    buffer buffer;
-    buffer_init(&buffer, MAX_BUFFER_SIZE, NULL);
+    buffer *buffer = malloc(sizeof(buffer));
+    uint8_t buf[MAX_BUFFER_SIZE];
+    buffer_init(buffer, MAX_BUFFER_SIZE, buf);
 
     if (client_fd == -1) {
         perror("Accept failed");
@@ -101,7 +100,7 @@ void pop3_passive_accept(struct selector_key *key) {
     };
 
     // Register the client socket with the selector for OP_READ (only read initially)
-    selector_status status = selector_register(key->s, client_fd, &echo_handler, OP_READ, &buffer);
+    selector_status status = selector_register(key->s, client_fd, &echo_handler, OP_READ, buffer);
 
     if (status != SELECTOR_SUCCESS) {
         fprintf(stderr, "Failed to register client fd with selector: %s\n", selector_error(status));
