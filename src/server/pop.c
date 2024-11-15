@@ -43,6 +43,7 @@ void echo_handle_read(struct selector_key *key) {
         // This ensures that the cleanup will happen later, once the event loop is done processing
         // The cleanup will be done in the close handler when the socket is unregistered
         selector_set_interest(key->s, key->fd, OP_NOOP);  // Temporarily remove it from the selector
+        selector_unregister_fd(key->s, key->fd);
         return;
     }
 
@@ -72,6 +73,7 @@ void echo_handle_write(struct selector_key * key){
     if (!buffer_can_read(key->data)) {
         // If no more data to read, stop interest in writing
         selector_set_interest(key->s, key->fd, OP_READ);
+        return;
     }
 }
 
@@ -81,7 +83,7 @@ void echo_handle_close(struct selector_key *key) {
     printf("Closing connection: fd = %d\n", key->fd);
 
 /// Unregister from the selector.
-    selector_unregister_fd(key->s, key->fd);
+    //selector_unregister_fd(key->s, key->fd);
     
     // Close the socket
     close(key->fd);
