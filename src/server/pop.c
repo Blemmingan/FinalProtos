@@ -26,10 +26,10 @@ typedef struct pop3{
 void echo_handle_read(struct selector_key *key) {
 
     // Read data from the client
-    size_t nbytes;
+    ssize_t nbytes;
     ssize_t bytes_read = recv(key->fd, buffer_read_ptr(key->data, &nbytes), MAX_BUFFER_SIZE, 0);
     nbytes += bytes_read;
-    buffer_write(key->data, (uint8_t) nbytes);
+    buffer_write_adv(key->data, nbytes);
     if (bytes_read == -1) {
         perror("Error reading from client");
         close(key->fd);
