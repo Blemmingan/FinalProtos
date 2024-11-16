@@ -132,6 +132,18 @@ void pop3_passive_accept(struct selector_key *key) {
     }
 } 
 
+int parse_command( char* command ){
+
+    if (strncmp(command, "USER", 4) == 0) {
+        return USER;
+    } 
+    /* mas else con los demas comandos 
+    else if (strncmp(, ,) == 0) {    
+    } 
+    */
+    return 0;
+}
+
 void process_client_request(int client_fd) {
     char client_buffer[BUFFER_SIZE];
     int bytes_received;
@@ -155,22 +167,24 @@ void process_client_request(int client_fd) {
         buffer_write(client_buffer_struct, '\0');
         char* command = buffer_read_ptr(client_buffer_struct, &(size_t) {4});
         buffer_read_adv(client_buffer_struct, (size_t) 4);
-        switch (get_command_value(command)) {
+        switch (parse_command(command)) {
             case USER:
                 if (buffer_read(client_buffer_struct) == '\0') {
                     response = "-ERR Missing username. Please provide a valid username.\r\n";
                     send(client_fd, response, strlen(response), 0);
                 } else {
-                    if (validate_user(client_buffer_struct)) {
+                    if (validate_user_directory(client_buffer_struct)) {
                         response = "-ERR User not found. Please check the username and try again.\r\n";
                         send(client_fd, response, strlen(response), 0);
                     } else {
                         response = "+OK User accepted. Password is required.\r\n";
                         send(client_fd, response, strlen(response), 0);
+                        /* hacer load_user_data 
                         if (load_user_data()) {
                             response = "-ERR Error loading user data. Please try again later.\r\n";
                             send(client_fd, response, strlen(response), 0);
                         }
+                        */
                     }
                 }
                 break;
