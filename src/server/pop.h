@@ -3,7 +3,7 @@
 
 #define MAX_BUFFER_SIZE 4000
 #define GREETING "+OK READY\r\n"
-
+#define BASE_DIR "/home/usuarios/"
 
 enum pop_commands{
     USER, 

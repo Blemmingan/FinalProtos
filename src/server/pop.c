@@ -6,7 +6,7 @@
 #include <time.h>
 #include <unistd.h>  // close
 #include <pthread.h>
-
+#include <sys/stat.h>
 #include <arpa/inet.h>
 
 
@@ -131,3 +131,71 @@ void pop3_passive_accept(struct selector_key *key) {
         printf("Client registered for reading\n");
     }
 } 
+
+void process_client_request(int client_fd) {
+    char client_buffer[BUFFER_SIZE];
+    int bytes_received;
+    buffer * client_buffer_struct = malloc(sizeof(buffer));
+    buffer_init(client_buffer_struct, BUFFER_SIZE, client_buffer);
+    char * message="+OK POP3 server ready\r\n" ;
+    send(client_fd, message, strlen( message), 0);
+    while (1) {
+        char* response;
+        bytes_received = recv(client_fd, client_buffer, BUFFER_SIZE, 0);
+        if (bytes_received <= 0) {
+            if (bytes_received == 0) {
+                printf("Client disconnected.\n");
+            } else {
+                perror("recv error");
+            }
+            break;
+        }
+        buffer_compact(client_buffer_struct); 
+        buffer_write_adv(client_buffer_struct, bytes_received - 1); 
+        buffer_write(client_buffer_struct, '\0');
+        char* command = buffer_read_ptr(client_buffer_struct, &(size_t) {4});
+        buffer_read_adv(client_buffer_struct, (size_t) 4);
+        switch (get_command_value(command)) {
+            case USER:
+                if (buffer_read(client_buffer_struct) == '\0') {
+                    response = "-ERR Missing username. Please provide a valid username.\r\n";
+                    send(client_fd, response, strlen(response), 0);
+                } else {
+                    if (validate_user(client_buffer_struct)) {
+                        response = "-ERR User not found. Please check the username and try again.\r\n";
+                        send(client_fd, response, strlen(response), 0);
+                    } else {
+                        response = "+OK User accepted. Password is required.\r\n";
+                        send(client_fd, response, strlen(response), 0);
+                        if (load_user_data()) {
+                            response = "-ERR Error loading user data. Please try again later.\r\n";
+                            send(client_fd, response, strlen(response), 0);
+                        }
+                    }
+                }
+                break;
+
+            // otros comandos que hay que agregar en pop.h y ejecutarlos aca 
+        }
+    }
+}
+
+
+int validate_user_directory(buffer* input_buffer) {
+    char* username = buffer_read_ptr(input_buffer, &(size_t) {input_buffer->write - input_buffer->read});
+    buffer_read_adv(input_buffer, input_buffer->write - input_buffer->read);
+    sprintf(user_path, "%s%s", BASE_DIR, username);
+    struct stat file_status;
+    if (stat(user_path, &file_status) == 0) {
+        if (S_ISDIR(file_status.st_mode)) {
+            printf("El directorio '%s' fue  encontrado.\n", user_path);
+        } else {
+            printf("El archivo '%s' fue encontrado, pero no es un directorio.\n", user_path);
+            return 2;  
+        }
+    } else {
+        perror("No se pudo obtener información del directorio");
+        return 1;  
+    }
+    return 0;  
+}
