@@ -3,6 +3,7 @@
         "pthread.h": "c",
         "stm.h": "c",
         "buffer.h": "c",
-        "inet.h": "c"
+        "inet.h": "c",
+        "string.h": "c"
     }
 }

@@ -12,18 +12,25 @@
  */
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
+
+// Longitud máxima permitida para un comando ("USER", "PASS", "STAT").
+#define MAX_COMMAND_LEN 4
+// Longitud máxima permitida para un argumento.
+#define MAX_ARG_LEN 128
+
+typedef struct parser_event parser_event;
 
 /**
  * Evento que retorna el parser.
  * Cada tipo de evento tendrá sus reglas en relación a data.
  */
 struct parser_event {
-    /** tipo de evento */
-    unsigned type;
-    /** caracteres asociados al evento */
-    uint8_t  data[3];
-    /** cantidad de datos en el buffer `data' */
-    uint8_t  n;
+    char command[MAX_COMMAND_LEN];
+    size_t command_length;
+    char args[MAX_ARG_LEN];
+    size_t args_length;
+    bool done;
 
     /** lista de eventos: si es diferente de null ocurrieron varios eventos */
     struct parser_event *next;

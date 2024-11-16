@@ -3,6 +3,7 @@ include ./Makefile.inc
 SHARED_SOURCES=$(wildcard src/shared/*.c)
 SERVER_SOURCES=$(wildcard src/server/*.c)
 CLIENT_SOURCES=$(wildcard src/client/*.c)
+PARSER_SOURCES=$(wildcard src/parser/*.c)
 
 OUTPUT_FOLDER=./bin
 OBJECTS_FOLDER=./obj
@@ -31,6 +32,7 @@ obj/%.o: src/%.c
 	mkdir -p $(OBJECTS_FOLDER)/server
 	mkdir -p $(OBJECTS_FOLDER)/client
 	mkdir -p $(OBJECTS_FOLDER)/shared
+	mkdir -p $(OBJECTS_FOLDER)/parser 
 	$(COMPILER) $(COMPILERFLAGS) -c $< -o $@
 
 clean:
