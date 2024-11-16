@@ -4,17 +4,13 @@
 #define MAX_BUFFER_SIZE 4000
 #define GREETING "+OK READY\r\n"
 
-// AUTHORIZATION
-#define USER           "USER"
-#define PASS           "PASS"
 
-#define ERR_COMMAND    "-ERR unknown command\r\n"
-
-#define OK_USER        "+OK USER\r\n"
-#define OK_PASS        "+OK PASS\r\n"
-#define ERR_USER       "-ERR USER\r\n"
-#define ERR_PASS_VALID "-ERR PASS: invalid password\r\n"
-
+enum pop_commands{
+    USER, 
+    PASS,
+    DELE, 
+    ERR_COMMAND= -1
+};
 
 //  Handles accepting connections to the passive socket.
 void pop3_passive_accept(struct selector_key *key);

@@ -15,6 +15,9 @@
 #include "stm.h"
 #include"netutils.h"
 #include "pop.h"
+#define BUFFER_SIZE 512  
+
+char user_path[BUFFER_SIZE];
 
 typedef struct pop3{
     struct state_machine stateMachine;
@@ -127,4 +130,4 @@ void pop3_passive_accept(struct selector_key *key) {
     } else {
         printf("Client registered for reading\n");
     }
-}
+} 
