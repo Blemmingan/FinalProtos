@@ -6,10 +6,14 @@
 #define BASE_DIR "/home/usuarios/"
 
 enum pop_commands{
-    USER, 
+    USER,
     PASS,
+    STAT,
+    LIST,
+    RETR,
     DELE, 
-    ERR_COMMAND= -1
+    NOOP,
+    QUIT,
 };
 
 //  Handles accepting connections to the passive socket.
