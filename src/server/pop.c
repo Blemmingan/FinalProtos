@@ -15,6 +15,7 @@
 #include "stm.h"
 #include"netutils.h"
 #include "pop.h"
+#include "mainServer.h"
 #define BUFFER_SIZE 512  
 
 char user_path[BUFFER_SIZE];
@@ -31,13 +32,14 @@ void echo_handle_read(struct selector_key *key) {
     // Read data from the client
     ssize_t nbytes;
     ssize_t bytes_read = recv(key->fd, buffer_read_ptr(key->data, &nbytes), MAX_BUFFER_SIZE, 0);
-    nbytes += bytes_read;
-    buffer_write_adv(key->data, nbytes);
     if (bytes_read == -1) {
         perror("Error reading from client");
         close(key->fd);
         return;
     }
+    nbytes += bytes_read;
+    buffer_write_adv(key->data, nbytes);
+    
 
     if (bytes_read == 0) {
         // Client disconnected (clean close)
@@ -87,7 +89,8 @@ void echo_handle_close(struct selector_key *key) {
 
 /// Unregister from the selector.
     //selector_unregister_fd(key->s, key->fd);
-    
+    // Decrease the number of current connections
+    current_connections--;
     // Close the socket
     close(key->fd);
 }
@@ -97,6 +100,8 @@ void pop3_passive_accept(struct selector_key *key) {
     struct sockaddr_storage client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
     int client_fd = accept(key->fd, (struct sockaddr*)&client_addr, &client_addr_len);
+
+
 
     //char buffer[MAX_BUFFER_SIZE]; debe ser un tipo buffer
     buffer buffer;
@@ -110,6 +115,10 @@ void pop3_passive_accept(struct selector_key *key) {
     if (client_fd == -1) {
         perror("Accept failed");
         return;
+    }
+    else{
+        total_connections++;  // Increase the total number of connections
+        current_connections++;  // Increase the number of current connections
     }
 
     printf("Accepted a connection from client\n");

@@ -17,10 +17,15 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include "pop.h"
+#include "mainServer.h"
 
 
 #define DEFAULT_PORT 10080
 #define MAX_PENDING_CONNECTIONS 20
+
+// Contadores globales de conexiones.
+int total_connections = 0;
+int current_connections = 0;
 
 static bool done = false;
 //	Manejo de señales.
@@ -28,6 +33,10 @@ static void
 sigterm_handler(const int signal) {
     printf("signal %d, cleaning up and exiting\n",signal);
     done = true;
+}
+
+static void print_connection_stats() {
+    printf("\nTotal connections: %d, Current connections: %d\n", total_connections, current_connections);
 }
 
 int main(int argc, char ** argv){
@@ -118,6 +127,7 @@ int main(int argc, char ** argv){
     signal(SIGTERM, sigterm_handler);
     signal(SIGINT,  sigterm_handler);
 
+
     // Seteo los flags no bloqueantes.
     if(selector_fd_set_nio(serverSocket) == -1) {
         errorMessage = "getting server socket flags";
@@ -176,7 +186,8 @@ int main(int argc, char ** argv){
             errorMessage = "serving";
             goto finally;
         }
-        printf("WAITING FOR ACCEPT\n");
+        //printf("WAITING FOR ACCEPT");
+        print_connection_stats();
     }
     if(errorMessage == NULL) {
         errorMessage = "closing";
@@ -212,3 +223,4 @@ finally:
    
 
 }
+
