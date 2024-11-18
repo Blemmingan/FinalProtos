@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #define MAX_USERS 10
+#define MAX_DIRECTORY_LENGTH 256
 
 struct users {
     char *name;
@@ -21,7 +22,9 @@ struct pop3args {
 
     struct users    users[MAX_USERS];
 
-    // falta algo para Maildir
+    char directory[MAX_DIRECTORY_LENGTH];
+
+    // falta algo para el comando -t
 };
 
 /**

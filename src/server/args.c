@@ -50,7 +50,7 @@ usage(const char *progname) {
         "Usage: %s [OPTION]...\n"
         "\n"
         "   -h               Imprime la ayuda y termina.\n"
-        "   -l <POP3 addr>   Dirección donde servirá el proxy POP3.\n"
+        "   -l <POP3 addr>   Dirección donde servirá el servidor POP3.\n"
         "   -L <conf addr>   Dirección donde servirá el servicio de management.\n"
         "   -p <POP3 port>   Puerto entrante conexiones POP3.\n"
         "   -P <conf port>   Puerto entrante conexiones configuracion\n"
@@ -68,7 +68,7 @@ parse_args(const int argc, char **argv, struct pop3args *args) {
     memset(args, 0, sizeof(*args)); // sobre todo para setear en null los punteros de users
 
     args->pop3_addr = "0.0.0.0";
-    args->pop3_port = 1080;
+    args->pop3_port = 10080;
 
     args->mng_addr   = "127.0.0.1";
     args->mng_port   = 8080;
@@ -84,7 +84,7 @@ parse_args(const int argc, char **argv, struct pop3args *args) {
             { 0,           0,                 0, 0 }
         };
 
-        c = getopt_long(argc, argv, "hl:L:Np:P:u:v", long_options, &option_index);
+        c = getopt_long(argc, argv, "hl:L:Np:P:u:vd:t:", long_options, &option_index);
         if (c == -1)
             break;
 
@@ -97,9 +97,6 @@ parse_args(const int argc, char **argv, struct pop3args *args) {
                 break;
             case 'L':
                 args->mng_addr = optarg;
-                break;
-            case 'N':
-                args->disectors_enabled = false;
                 break;
             case 'p':
                 args->pop3_port = port(optarg);
@@ -120,6 +117,8 @@ parse_args(const int argc, char **argv, struct pop3args *args) {
                 version();
                 exit(0);
                 break;
+            case 'd':
+                strcpy(args->directory, optarg);
             default:
                 fprintf(stderr, "unknown argument %d.\n", c);
                 exit(1);
