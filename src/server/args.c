@@ -119,6 +119,10 @@ parse_args(const int argc, char **argv, struct pop3args *args) {
                 break;
             case 'd':
                 strcpy(args->directory, optarg);
+                break;
+            case 't':
+                // TODO:
+                break;
             default:
                 fprintf(stderr, "unknown argument %d.\n", c);
                 exit(1);

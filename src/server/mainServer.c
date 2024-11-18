@@ -18,16 +18,17 @@
 #include <netinet/tcp.h>
 #include "pop.h"
 #include "mainServer.h"
-
-
-#define DEFAULT_PORT 10080
-#define MAX_PENDING_CONNECTIONS 20
+#include "args.h"
+#include "socketUtils.h"
 
 // Contadores globales de conexiones.
 int total_connections = 0;
 int current_connections = 0;
 
+struct pop3args * args;
+
 static bool done = false;
+
 //	Manejo de señales.
 static void
 sigterm_handler(const int signal) {
@@ -41,86 +42,29 @@ static void print_connection_stats() {
 
 int main(int argc, char ** argv){
     
-    //  PORT NUMBER MANAGEMENT
+    // args tiene: pop3_addr, pop3_port, mng_addr, mng_port, users[MAX_USERS], directory[MAX_DIRECTORY_LENGTH];
+    args = (struct pop3args *) malloc (sizeof(struct pop3args)); 
 
-    int port = DEFAULT_PORT;
-    if (argc == 1){
-        //  No argument given, use default port
-    }
-    else if (argc == 2){
-        //	Use specified port.
-        char *end     = 0;
-        const long sl = strtol(argv[1], &end, 10);
-
-	//	Checks whether the port number is both valid and a number.  
-        if (end == argv[1]|| '\0' != *end 
-           || ((LONG_MIN == sl || LONG_MAX == sl) && ERANGE == errno)
-           || sl < 0 || sl > USHRT_MAX) {
-            fprintf(stderr, "port should be an integer: %s\n", argv[1]);
-            return 1;
-        }
-        //  New port used will be the port given by command line arguments.
-        port = sl;
-    }
-    else{
-        fprintf(stderr, "Usage: %s <port number>\n", argv[0]);
-        return 1;
-    }
+    parse_args(argc, argv, args);
 
     printf("Starting server...\n");
-    printf("Starting server2...\n");
     //  I close stdin because I am a server, I do not read from stdin.
     close(0);
 
     const char * errorMessage = NULL;
+
     //  Selector must begin in SUCCESS by default.
     selector_status selectorStatus = SELECTOR_SUCCESS;
     fd_selector selector = NULL;
 
-    //  sockaddr_in has both port number and IP address.
-    struct sockaddr_in address;
-    //  Does pretty much the same as calloc, except this memory has already been alloc'd.
-    memset(&address, 0, sizeof(address));
-
-    //  You are an IPV4 socket.
-    address.sin_family = AF_INET;
-    //  INADDR_ANY is actually 0.0.0.0, port will listen.
-    address.sin_addr.s_addr = htonl(INADDR_ANY);
-    //  Converts port number to the correct format to use with sockets.
-    //  Socket will listen on port number specified.
-    address.sin_port = htons(port);
-
-    //  Creates the socket. Socket will use IPV4, a stream-based protocol, and TCP.
-    //  Socket file descriptor will be saved in the variable.
-    const int serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    int serverSocket = create_server_socket(args->pop3_addr, args->pop3_port);
 
     if(serverSocket == -1){
-        errorMessage = "Socket creation failed.\n";
+        errorMessage = "unable to create socket";
         goto finally;
     }
 
-    fprintf(stdout, "Listening on TCP port %d\n", port);
-
-    //  SOL_SOCKET means this is a socket-level option.
-    //  REUSEADDR means it can reuse local addresses.
-    //  The {1} is a temporary value to set the various options to 1.
-    //  The sizeof is an indicator of the size of the value we are setting.
-    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
-
-    if(bind(serverSocket, (struct sockaddr *) &address, sizeof(address)) < 0){
-        errorMessage = "Unable to bind passive socket.\n";
-        printf("Unable to bind passive socket.\n");
-        goto finally;
-    }
-
-    if (listen(serverSocket, MAX_PENDING_CONNECTIONS) < 0) {
-        errorMessage = "Passive socket is unable to listen\n";
-        printf("Passive socket unable to listen.\n");
-        goto finally;
-    }
-
-    printf("Socket is bound and listening\n");
-
+    // Acá iria el create_manager_socket
 
     // registrar sigterm es útil para terminar el programa normalmente.
     // esto ayuda mucho en herramientas como valgrind.
@@ -193,10 +137,8 @@ int main(int argc, char ** argv){
         errorMessage = "closing";
     }
 
-
-
-
     int ret = 0;
+
 finally: 
     printf("In FINALLY\n");
     //  If there was an error...
@@ -219,8 +161,4 @@ finally:
         close(serverSocket);
     }
     return ret;
-
-   
-
 }
-
