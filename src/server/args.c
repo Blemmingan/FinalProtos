@@ -39,9 +39,9 @@ user(char *s, struct users *user) {
 
 static void
 version(void) {
-    fprintf(stderr, "socks5v version 0.0\n"
-                    "ITBA Protocolos de Comunicación 2020/1 -- Grupo X\n"
-                    "AQUI VA LA LICENCIA\n");
+    fprintf(stderr, "pop3 version 0.0\n"
+                    "ITBA Protocolos de Comunicación 2024/2 -- Grupo 4\n"
+                    "Copyright (c) 2024 Grupo 4\n");
 }
 
 static void
@@ -50,41 +50,30 @@ usage(const char *progname) {
         "Usage: %s [OPTION]...\n"
         "\n"
         "   -h               Imprime la ayuda y termina.\n"
-        "   -l <SOCKS addr>  Dirección donde servirá el proxy SOCKS.\n"
-        "   -L <conf  addr>  Dirección donde servirá el servicio de management.\n"
-        "   -p <SOCKS port>  Puerto entrante conexiones SOCKS.\n"
+        "   -l <POP3 addr>   Dirección donde servirá el proxy POP3.\n"
+        "   -L <conf addr>   Dirección donde servirá el servicio de management.\n"
+        "   -p <POP3 port>   Puerto entrante conexiones POP3.\n"
         "   -P <conf port>   Puerto entrante conexiones configuracion\n"
         "   -u <name>:<pass> Usuario y contraseña de usuario que puede usar el proxy. Hasta 10.\n"
         "   -v               Imprime información sobre la versión versión y termina.\n"
-        "\n"
-        "   --doh-ip    <ip>    \n"
-        "   --doh-port  <port>  XXX\n"
-        "   --doh-host  <host>  XXX\n"
-        "   --doh-path  <host>  XXX\n"
-        "   --doh-query <host>  XXX\n"
-
+        "   -d <dir>         Carpeta donde residen los Maildirs.\n"
+        "   -t <cmd>         Comando para aplicar transformaciones.\n"
         "\n",
         progname);
     exit(1);
 }
 
 void 
-parse_args(const int argc, char **argv, struct socks5args *args) {
+parse_args(const int argc, char **argv, struct pop3args *args) {
     memset(args, 0, sizeof(*args)); // sobre todo para setear en null los punteros de users
 
-    args->socks_addr = "0.0.0.0";
-    args->socks_port = 1080;
+    args->pop3_addr = "0.0.0.0";
+    args->pop3_port = 1080;
 
     args->mng_addr   = "127.0.0.1";
     args->mng_port   = 8080;
 
     args->disectors_enabled = true;
-
-    args->doh.host = "localhost";
-    args->doh.ip   = "127.0.0.1";
-    args->doh.port = 8053;
-    args->doh.path = "/getnsrecord";
-    args->doh.query = "?dns=";
 
     int c;
     int nusers = 0;
@@ -92,11 +81,6 @@ parse_args(const int argc, char **argv, struct socks5args *args) {
     while (true) {
         int option_index = 0;
         static struct option long_options[] = {
-            { "doh-ip",    required_argument, 0, 0xD001 },
-            { "doh-port",  required_argument, 0, 0xD002 },
-            { "doh-host",  required_argument, 0, 0xD003 },
-            { "doh-path",  required_argument, 0, 0xD004 },
-            { "doh-query", required_argument, 0, 0xD005 },
             { 0,           0,                 0, 0 }
         };
 
@@ -109,7 +93,7 @@ parse_args(const int argc, char **argv, struct socks5args *args) {
                 usage(argv[0]);
                 break;
             case 'l':
-                args->socks_addr = optarg;
+                args->pop3_addr = optarg;
                 break;
             case 'L':
                 args->mng_addr = optarg;
@@ -118,7 +102,7 @@ parse_args(const int argc, char **argv, struct socks5args *args) {
                 args->disectors_enabled = false;
                 break;
             case 'p':
-                args->socks_port = port(optarg);
+                args->pop3_port = port(optarg);
                 break;
             case 'P':
                 args->mng_port   = port(optarg);
@@ -135,21 +119,6 @@ parse_args(const int argc, char **argv, struct socks5args *args) {
             case 'v':
                 version();
                 exit(0);
-                break;
-            case 0xD001:
-                args->doh.ip = optarg;
-                break;
-            case 0xD002:
-                args->doh.port = port(optarg);
-                break;
-            case 0xD003:
-                args->doh.host = optarg;
-                break;
-            case 0xD004:
-                args->doh.path = optarg;
-                break;
-            case 0xD005:
-                args->doh.query = optarg;
                 break;
             default:
                 fprintf(stderr, "unknown argument %d.\n", c);
