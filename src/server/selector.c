@@ -447,9 +447,6 @@ selector_set_interest_key(struct selector_key *key, fd_interest i) {
  * se encarga de manejar los resultados del select.
  * se encuentra separado para facilitar el testing
  */
-
-//rompe 
-/* 
 static void
 handle_iteration(fd_selector s) {
     int n = s->max_fd;
@@ -483,52 +480,7 @@ handle_iteration(fd_selector s) {
         }
     }
 }
-*/
-//queda en bucle tambien 
-static void handle_iteration(fd_selector s) {
-    int n = s->max_fd;
-    struct selector_key key = {
-        .s = s,
-    };
 
-    for (int i = 0; i <= n; i++) {
-        struct item *item = s->fds + i;
-
-        // Verificar si el item está en uso
-        if (ITEM_USED(item)) {
-            // Verificar si handler está inicializado correctamente
-            if (item->handler == NULL || item->handler->handle_write == NULL) {
-                // Solo imprime la advertencia una vez para el mismo item
-                static bool printed_warning = false;
-                if (!printed_warning) {
-                    fprintf(stderr, "Warning: handler or handle_write is NULL for item %d\n", i);
-                    printed_warning = true;  // Desactiva la impresión posterior
-                }
-                continue;  // Saltar al siguiente item
-            }
-
-            key.fd = item->fd;
-            key.data = item->data;
-
-            // Comprobamos si el descriptor está listo para lectura
-            if (FD_ISSET(item->fd, &s->slave_r)) {
-                if (OP_READ & item->interest) {
-                    item->handler->handle_read(&key);
-                }
-            }
-
-            // Comprobamos si el descriptor está listo para escritura
-            if (FD_ISSET(item->fd, &s->slave_w)) {
-                if (OP_WRITE & item->interest) {
-                    item->handler->handle_write(&key);  // Ahora estamos seguros de que handle_write no es NULL
-                }
-            }
-        }
-    }
-
-    return;
-    
-}
 static void
 handle_block_notifications(fd_selector s) {
     struct selector_key key = {
