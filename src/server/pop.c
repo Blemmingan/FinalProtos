@@ -40,9 +40,11 @@ void echo_handle_read(struct selector_key *key) {
     }
     nbytes += bytes_read;
     buffer_write_adv(key->data, nbytes);
-    
 
-    if (bytes_read == 0) {
+    if(bytes_read != 0){
+        parse_command(key->fd, key->data);
+    }
+    else if (bytes_read == 0) {
         // Client disconnected (clean close)
         printf("Client disconnected, preparing to close connection...\n");
         buffer_reset(key->data);
@@ -104,7 +106,6 @@ void pop3_passive_accept(struct selector_key *key) {
 
 
 
-    //char buffer[MAX_BUFFER_SIZE]; debe ser un tipo buffer
     buffer buffer;
     buffer.data = NULL;
     buffer.limit = NULL;
@@ -143,11 +144,16 @@ void pop3_passive_accept(struct selector_key *key) {
     version(client_fd);
 } 
 
-int parse_command( char* command ){
+int parse_command(int fd, buffer * buff ){
 
-    if (strncmp(command, "USER", 4) == 0) {
+    if (strncmp(buff->data, "USER ", 5) == 0) {
+        printf("Received a USER command");
         return USER;
-    } 
+        
+    }
+    else{
+        //usage(fd, buff);
+    }
     /* mas else con los demas comandos 
     else if (strncmp(, ,) == 0) {    
     } 
@@ -178,7 +184,7 @@ void process_client_request(int client_fd) {
         buffer_write(client_buffer_struct, '\0');
         char* command = buffer_read_ptr(client_buffer_struct, &(size_t) {4});
         buffer_read_adv(client_buffer_struct, (size_t) 4);
-        switch (parse_command(command)) {
+        switch (parse_command(client_fd, command)) {
             case USER:
                 if (buffer_read(client_buffer_struct) == '\0') {
                     response = "-ERR Missing username. Please provide a valid username.\r\n";

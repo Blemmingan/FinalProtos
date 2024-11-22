@@ -44,9 +44,9 @@ version(int fd) {
                     "Copyright (c) 2024 Grupo 4\n");
 }
 
-static void
-usage(const char *progname) {
-    fprintf(stderr,
+void
+usage(int fd, const char *progname) {
+    dprintf(fd,
         "Usage: %s [OPTION]...\n"
         "\n"
         "   -h               Imprime la ayuda y termina.\n"
@@ -58,8 +58,7 @@ usage(const char *progname) {
         "   -v               Imprime información sobre la versión versión y termina.\n"
         "   -d <dir>         Carpeta donde residen los Maildirs.\n"
         "   -t <cmd>         Comando para aplicar transformaciones.\n"
-        "\n",
-        progname);
+        "\n", progname);
     exit(1);
 }
 
@@ -90,7 +89,7 @@ parse_args(const int argc, char **argv, struct pop3args *args) {
 
         switch (c) {
             case 'h':
-                usage(argv[0]);
+                usage(0, argv[0]);
                 break;
             case 'l':
                 args->pop3_addr = optarg;

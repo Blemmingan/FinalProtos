@@ -38,5 +38,7 @@ parse_args(const int argc, char **argv, struct pop3args *args);
 void 
 version(int fd);
 
+void
+usage(int fd, const char *progname);
 #endif
 

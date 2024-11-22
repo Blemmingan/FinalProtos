@@ -27,4 +27,10 @@ void echo_handle_write(struct selector_key * key);
 
 //  Handles client closing the connection.
 void echo_handle_close(struct selector_key *key) ;
+
+int parse_command(int fd, buffer * buff );
+
+void process_client_request(int client_fd);
+
+int validate_user_directory(buffer* input_buffer);
 #endif
