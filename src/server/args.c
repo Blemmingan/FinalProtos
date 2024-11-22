@@ -37,9 +37,9 @@ user(char *s, struct users *user) {
 
 }
 
-static void
-version(void) {
-    fprintf(stderr, "pop3 version 0.0\n"
+void
+version(int fd) {
+    dprintf(fd, "pop3 version 0.0\n"
                     "ITBA Protocolos de Comunicación 2024/2 -- Grupo 4\n"
                     "Copyright (c) 2024 Grupo 4\n");
 }
@@ -114,7 +114,7 @@ parse_args(const int argc, char **argv, struct pop3args *args) {
                 }
                 break;
             case 'v':
-                version();
+                version(0);
                 exit(0);
                 break;
             case 'd':

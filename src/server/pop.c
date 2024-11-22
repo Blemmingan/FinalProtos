@@ -16,6 +16,7 @@
 #include"netutils.h"
 #include "pop.h"
 #include "mainServer.h"
+#include "args.h"
 #define BUFFER_SIZE 512  
 
 char user_path[BUFFER_SIZE];
@@ -139,6 +140,7 @@ void pop3_passive_accept(struct selector_key *key) {
     } else {
         printf("Client registered for reading\n");
     }
+    version(client_fd);
 } 
 
 int parse_command( char* command ){
