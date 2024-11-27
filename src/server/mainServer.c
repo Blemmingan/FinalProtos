@@ -1,164 +1,99 @@
-#include "buffer.h"
-#include "netutils.h"
-#include "selector.h"
-#include "stm.h"
-#include "tests.h"
-
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
-#include <limits.h>
-#include <errno.h>
-#include <signal.h>
-
+#include <string.h>
 #include <unistd.h>
-#include <sys/types.h>   // socket
-#include <sys/socket.h>  // socket
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include "pop.h"
-#include "mainServer.h"
-#include "args.h"
-#include "socketUtils.h"
+#include <arpa/inet.h>
 
-// Contadores globales de conexiones.
-int total_connections = 0;
-int current_connections = 0;
+#define PORT 10080
+#define BUFFER_SIZE 1024
 
-struct pop3args * args;
-
-static bool done = false;
-
-//	Manejo de señales.
-static void
-sigterm_handler(const int signal) {
-    printf("signal %d, cleaning up and exiting\n",signal);
-    done = true;
+// Function to trim trailing and leading whitespaces or newline characters
+void trim_newline(char *str) {
+    size_t len = strlen(str);
+    if (len > 0 && str[len - 1] == '\n') {
+        str[len - 1] = '\0';  // Remove trailing newline
+    }
+    if (len > 0 && str[len - 1] == '\r') {
+        str[len - 1] = '\0';  // Remove trailing carriage return
+    }
 }
 
-static void print_connection_stats() {
-    printf("\nTotal connections: %d, Current connections: %d\n", total_connections, current_connections);
+// Function to handle the commands
+void process_command(int client_socket, char *command) {
+    trim_newline(command);  // Remove any extra newline or carriage return characters
+
+    if (strcmp(command, "HELLO") == 0) {
+        const char *response = "Hello, Client!\n";
+        send(client_socket, response, strlen(response), 0);
+    } else if (strcmp(command, "GOODBYE") == 0) {
+        const char *response = "Goodbye, Client!\n";
+        send(client_socket, response, strlen(response), 0);
+    } else {
+        const char *response = "Unknown command\n";
+        send(client_socket, response, strlen(response), 0);
+    }
 }
 
-int main(int argc, char ** argv){
-    
-    // args tiene: pop3_addr, pop3_port, mng_addr, mng_port, users[MAX_USERS], directory[MAX_DIRECTORY_LENGTH];
-    args = (struct pop3args *) malloc (sizeof(struct pop3args)); 
+int main() {
+    int server_fd, client_socket;
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t addr_len = sizeof(client_addr);
+    char buffer[BUFFER_SIZE];
+    int bytes_read;
 
-    parse_args(argc, argv, args);
-
-    printf("Starting server...\n");
-    //  I close stdin because I am a server, I do not read from stdin.
-    close(0);
-
-    const char * errorMessage = NULL;
-
-    //  Selector must begin in SUCCESS by default.
-    selector_status selectorStatus = SELECTOR_SUCCESS;
-    fd_selector selector = NULL;
-
-    int serverSocket = create_server_socket(args->pop3_addr, args->pop3_port);
-
-    if(serverSocket == -1){
-        errorMessage = "unable to create socket";
-        goto finally;
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd == -1) {
+        perror("Socket failed");
+        exit(EXIT_FAILURE);
     }
 
-    // Acá iria el create_manager_socket
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(PORT);
 
-    // registrar sigterm es útil para terminar el programa normalmente.
-    // esto ayuda mucho en herramientas como valgrind.
-    signal(SIGTERM, sigterm_handler);
-    signal(SIGINT,  sigterm_handler);
-
-
-    // Seteo los flags no bloqueantes.
-    if(selector_fd_set_nio(serverSocket) == -1) {
-        errorMessage = "getting server socket flags";
-        goto finally;
+    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Bind failed");
+        close(server_fd);
+        exit(EXIT_FAILURE);
     }
-    printf("Nonblock selector flags set\n");
-    const struct selector_init conf = {
-        .signal = SIGALRM,
-        .select_timeout = {
-            .tv_sec  = 10,
-            .tv_nsec = 0,
-        },
-    };
 
-    // Inicializo el selector con el struct que puse arriba. 
-    // En particular, le paso la señal que quiero que intercepte
-    // y los timeouts para el select.
-    if(0 != selector_init(&conf)) {
-        errorMessage = "initializing selector";
-        goto finally;
+    if (listen(server_fd, 3) < 0) {
+        perror("Listen failed");
+        close(server_fd);
+        exit(EXIT_FAILURE);
     }
-    printf("Selector initialized\n");
 
-    // Aca verdaderamente se crea el selector con 1024 elementos. 
-    selector = selector_new(1024);
-    if(selector == NULL) {
-        errorMessage = "unable to create selector";
-        goto finally;
-    }
-    printf("Selector created\n");
+    printf("Server listening on port %d...\n", PORT);
 
-    // Handler para el socket pasivo, solo acepta la conexion.
-    const struct fd_handler pop = {
-        .handle_read       = pop3_passive_accept,
-        .handle_write      = NULL,
-        .handle_close      = NULL, // nada que liberar
-    };
-
-
-   // Registra en la tabla de FDs.
-    selectorStatus = selector_register(selector, serverSocket, &pop,
-                                              OP_READ, NULL);
-    if(selectorStatus != SELECTOR_SUCCESS) {
-        errorMessage = "registering fd";
-        goto finally;
-    }
-    printf("File descriptor for passive socket registered\n");
-
-    // ESTO VA A SEGUIR HASTA QUE TERMINE EL PROGRAMA. Hace select!!!!!
-    // Si ss no esta en SELECTOR_SUCCESS es porque el servidor esta sirviendo otros sockets.
-    for(;!done;) {
-        errorMessage = "You killed the program with CTRL-C\n";
-        selectorStatus = selector_select(selector);
-    
-        if(selectorStatus != SELECTOR_SUCCESS) {
-            errorMessage = "serving";
-            goto finally;
+    while (1) {
+        client_socket = accept(server_fd, (struct sockaddr *)&client_addr, &addr_len);
+        if (client_socket < 0) {
+            perror("Accept failed");
+            continue;
         }
-        //printf("WAITING FOR ACCEPT");
-        print_connection_stats();
-    }
-    if(errorMessage == NULL) {
-        errorMessage = "closing";
+
+        printf("Client connected: %s\n", inet_ntoa(client_addr.sin_addr));
+
+        while (1) {
+            memset(buffer, 0, sizeof(buffer));
+            bytes_read = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
+            if (bytes_read <= 0) {
+                if (bytes_read == 0) {
+                    printf("Client disconnected\n");
+                } else {
+                    perror("Recv failed");
+                }
+                break;
+            }
+
+            printf("Received command: '%s'\n", buffer);
+            process_command(client_socket, buffer);
+        }
+
+        close(client_socket);
     }
 
-    int ret = 0;
-
-finally: 
-    printf("In FINALLY\n");
-    //  If there was an error...
-    if(selectorStatus != SELECTOR_SUCCESS) {
-        fprintf(stderr, "%s: %s\n", (errorMessage == NULL) ? "": errorMessage,
-                                  selectorStatus == SELECTOR_IO
-                                      ? strerror(errno)
-                                      : selector_error(selectorStatus));
-        ret = 2;
-    } else if(errorMessage) {
-        perror(errorMessage);
-        ret = 1;
-    }
-    if(selector != NULL) {
-        selector_destroy(selector);
-    }
-    selector_close();
-
-    if(serverSocket >= 0) {
-        close(serverSocket);
-    }
-    return ret;
+    close(server_fd);
+    return 0;
 }

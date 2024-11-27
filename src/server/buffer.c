@@ -1,107 +1,83 @@
-/**
- * buffer.c - buffer con acceso directo (útil para I/O) que mantiene
- *            mantiene puntero de lectura y de escritura.
- */
 #include <string.h>
 #include <stdint.h>
 #include <assert.h>
-
 #include "buffer.h"
 
-inline void
-buffer_reset(buffer *b) {
-    b->read  = b->data;
-    b->write = b->data;
-}
-
-void
-buffer_init(buffer *b, const size_t n, uint8_t *data) {
+// Initialize the buffer with the provided data array and size
+void buffer_init(buffer *b, uint8_t *data, size_t size) {
     b->data = data;
-    buffer_reset(b);
-    b->limit = b->data + n;
+    b->size = size;
+    b->read = 0;
+    b->write = 0;
 }
 
-
-inline bool
-buffer_can_write(buffer *b) {
-    return b->limit - b->write > 0;
-}
-
-inline uint8_t *
-buffer_write_ptr(buffer *b, size_t *nbyte) {
-    assert(b->write <= b->limit);
-    *nbyte = b->limit - b->write;
-    return b->write;
-}
-
-inline bool
-buffer_can_read(buffer *b) {
-    return b->write - b->read > 0;
-}
-
-inline uint8_t *
-buffer_read_ptr(buffer *b, size_t *nbyte) {
-    assert(b->read <= b->write);
-    *nbyte = b->write - b->read;
-    return b->read;
-}
-
-inline void
-buffer_write_adv(buffer *b, const ssize_t bytes) {
-    if(bytes > -1) {
-        b->write += (size_t) bytes;
-        assert(b->write <= b->limit);
-    }
-}
-
-inline void
-buffer_read_adv(buffer *b, const ssize_t bytes) {
-    if(bytes > -1) {
-        b->read += (size_t) bytes;
-        assert(b->read <= b->write);
-
-        if(b->read == b->write) {
-            // compactacion poco costosa
-            buffer_compact(b);
-        }
-    }
-}
-
-inline uint8_t
-buffer_read(buffer *b) {
-    uint8_t ret;
-    if(buffer_can_read(b)) {
-        ret = *b->read;
-        buffer_read_adv(b, 1);
+//  Getters for read and write
+uint8_t *buffer_read_ptr(buffer *b, size_t *nbyte) {
+    // If there is data available to read, return the pointer to the data
+    if (buffer_can_read(b)) {
+        *nbyte = buffer_available_read(b);
+        return &b->data[b->read];
     } else {
-        ret = 0;
-    }
-    return ret;
-}
-
-inline void
-buffer_write(buffer *b, uint8_t c) {
-    if(buffer_can_write(b)) {
-        *b->write = c;
-        buffer_write_adv(b, 1);
+        *nbyte = 0;
+        return NULL;  // Return NULL if there's no data to read
     }
 }
+// Check if the buffer can write more data
+bool buffer_can_write(const buffer *b) {
+    return b->write < b->size;
+}
 
-void
-buffer_compact(buffer *b) {
-    if(b->data == b->read) {
-        // nada por hacer
-    } else if(b->read == b->write) {
-        b->read  = b->data;
-        b->write = b->data;
-    } else {
-        const size_t n = b->write - b->read;
-        memmove(b->data, b->read, n);
-        b->read  = b->data;
-        b->write = b->data + n;
+// Check if the buffer has any data to read
+bool buffer_can_read(const buffer *b) {
+    return b->read < b->write;
+}
+
+// Write a byte to the buffer
+void buffer_write(buffer *b, uint8_t byte) {
+    if (buffer_can_write(b)) {
+        b->data[b->write] = byte;
+        b->write++;
     }
 }
 
-uint64_t buffer_position(buffer * b){
+// Read a byte from the buffer
+uint8_t buffer_read(buffer *b) {
+    uint8_t byte = 0;
+    if (buffer_can_read(b)) {
+        byte = b->data[b->read];
+        b->read++;
+    }
+    return byte;
+}
+
+// Reset the buffer, clearing the read and write positions
+void buffer_reset(buffer *b) {
+    b->read = 0;
+    b->write = 0;
+}
+
+// Get the current size of the available data in the buffer
+size_t buffer_available_read(const buffer *b) {
     return b->write - b->read;
+}
+
+// Get the remaining space available in the buffer
+size_t buffer_available_write(const buffer *b) {
+    return b->size - b->write;
+}
+
+// Advance the read pointer by a specific number of bytes
+void buffer_read_adv(buffer *b, size_t bytes) {
+    assert(b->read + bytes <= b->write); // Ensure we're not reading beyond the write position
+    b->read += bytes;
+
+    // Optional: if the buffer is empty after advancing, reset the read/write pointers
+    if (b->read == b->write) {
+        buffer_reset(b);
+    }
+}
+
+void buffer_write_adv(buffer *b, size_t bytes) {
+    assert(b->write + bytes <= b->size); // Ensure we're not writing beyond the buffer's capacity
+    b->write += bytes;
 }
